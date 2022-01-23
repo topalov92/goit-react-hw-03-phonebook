@@ -1,65 +1,105 @@
-import React, { Component } from "react";
-import { v4 as uuidv4 } from "uuid";
+import React from 'react';
 
-import Form from "./Form/Form.js";
-import ContactList from "./ContactLIst/ContactList.js";
-import Filter from "./Filter/Filter.js";
+import { v4 as uuidv4 } from 'uuid';
 
-export default class App extends Component {
-  static defaultProps = {
-    contacts: [
-      { id: uuidv4(), name: "Rosie Simpson", number: "459-12-56" },
-      { id: uuidv4(), name: "Hermione Kline", number: "443-89-12" },
-      { id: uuidv4(), name: "Eden Clements", number: "645-17-79" },
-      { id: uuidv4(), name: "Annie Copeland", number: "227-91-26" },
-    ],
-  };
+import { Container } from './components/Container/Container';
+import { ContactForm } from './components/ContactForm/ContactForm';
+import { ContactList } from './components/ContactList/ContactList';
+import { Notification } from './components/Notification/Notification';
+import { Input } from './components/Input/Input';
 
+import { H1Styled, H2Styled } from './App.styles';
+
+class App extends React.Component {
   state = {
-    contacts: [...this.props.contacts],
-    filter: "",
+    contacts: [],
+    filter: '',
   };
 
-  addContact = (data) => {
-    this.setState({
-      contacts: [data, ...this.state.contacts],
-    });
-  };
-
-  changeFilter = (ev) => {
-    this.setState({
-      filter: ev.currentTarget.value,
-    });
-  };
-
-  visibleItems = () => {
-    const { contacts } = this.state;
-
-    return contacts.filter(({ name }) =>
-      name.toLowerCase().includes(this.state.filter.toLowerCase())
+  getContacts = () => {
+    const { contacts, filter } = this.state;
+    return contacts.filter(contact =>
+      contact.name.toLocaleLowerCase().includes(filter.toLowerCase()),
     );
   };
 
-  deleteContact = (contactID) => {
-    // console.log(contactID)
-    this.setState((prevState) => ({
-      contacts: prevState.contacts.filter(
-        (contact) => contact.id !== contactID
-      ),
+  addContact = newContact => {
+    if (
+      this.state.contacts.some(
+        contact => contact.name.toLowerCase() === newContact.name.toLowerCase(),
+      )
+    ) {
+      alert(
+        'You have contact with this name, please remove old contact and create new',
+      );
+      return;
+    }
+
+    this.setState({
+      contacts: [newContact, ...this.state.contacts],
+    });
+  };
+
+  removeContact = data => {
+    this.setState(prevState => ({
+      contacts: prevState.contacts.filter(contact => contact.id !== data),
     }));
   };
+
+  changeFilterValue = evt => {
+    this.setState({
+      filter: evt.target.value,
+    });
+  };
+
+  componentDidMount() {
+    const contacts = localStorage.getItem('contacts');
+    const parsedContacts = JSON.parse(contacts);
+
+    if (parsedContacts) {
+      this.setState({ contacts: parsedContacts });
+    }
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (this.state.contacts !== prevState.contacts) {
+      localStorage.setItem('contacts', JSON.stringify(this.state.contacts));
+    }
+  }
+
   render() {
-    const { filter } = this.state;
-    const { changeFilter, addContact } = this;
+    const contacts = this.getContacts();
+
     return (
-      <>
-        <Form addContactItem={addContact} contacts={this.state.contacts} />
-        <Filter value={filter} onChange={changeFilter} />
-        <ContactList
-          itemsRender={this.visibleItems()}
-          deleteItem={this.deleteContact}
-        />
-      </>
+      <Container>
+        <H1Styled>PhoneBook</H1Styled>
+        <H2Styled>Add contact</H2Styled>
+        <ContactForm onSubmit={this.addContact} />
+
+        <H2Styled>Contacts</H2Styled>
+        {this.state.contacts.length > 0 ? (
+          <>
+            {/* Filter */}
+            <Input
+              id={uuidv4()}
+              label={'Find contacts by name'}
+              placeholder={'Boris Britva'}
+              name={'search'}
+              value={this.state.filter}
+              onChange={this.changeFilterValue}
+            />
+
+            <ContactList
+              contacts={contacts}
+              onRemoveContact={this.removeContact}
+            />
+          </>
+        ) : (
+          <Notification text={'You don`t have any contacts'} />
+        )}
+      </Container>
     );
   }
 }
+
+export default App;
